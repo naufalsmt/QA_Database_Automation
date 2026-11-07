@@ -1,0 +1,16 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+
+# Pytest cache
+.pytest_cache/
+
+# Environment variables and secrets
+.env
+
+# PyCharm project settings
+.idea/
