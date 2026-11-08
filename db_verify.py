@@ -1,12 +1,5 @@
-import psycopg
-
-connection = psycopg.connect(
-    host='localhost',
-    port=5432,
-    dbname='qa_automation_db',
-    user='postgres',
-    password='admin0210'
-)
+from database import get_db_connection
+connection = get_db_connection()
 
 print('connection established')
 cursor = connection.cursor()
@@ -14,7 +7,6 @@ cursor = connection.cursor()
 expected_name = 'Naufal'
 expected_department = 'Software QA'
 expected_salary = 9000
-
 
 query = """
 SELECT * FROM employees WHERE employee_name=%s ORDER BY employee_id;"""
