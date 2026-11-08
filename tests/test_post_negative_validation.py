@@ -37,9 +37,9 @@ def test_post_invalid_salary():
 def test_duplicate_employee():
     url = 'http://127.0.0.1:8000/employees/'
     payload = {
-        "employee_name": "Anurag",
-        "department": "Devops Lead",
-        "salary": 14500
+        "employee_name": "Naufal",
+        "department": "Software QA",
+        "salary": 9000
     }
     req = requests.post(url, json=payload)
     print("Status code:", req.status_code)
