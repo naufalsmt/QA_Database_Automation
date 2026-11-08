@@ -1,0 +1,105 @@
+
+name: Python PostgreSQL QA Automation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: qa_automation_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d qa_automation_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: qa_automation_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set up test database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d qa_automation_db -f sql/setup_test_db.sql
+
+      - name: Run database-only tests
+        run: |
+          pytest \
+            tests/test_employee.py \
+            tests/test_employees_validation.py \
+            tests/test_update_validation.py \
+            tests/test_duplicate_check.py \
+            tests/test_not_null_validation.py \
+            tests/test_delete_validation.py \
+            -v -s
+
+      - name: Start GET API and run GET tests
+        run: |
+          python -m uvicorn employee_api:app --host 127.0.0.1 --port 8000 > get_api.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:8000/docs > /dev/null; then
+              echo "GET API is ready"
+              break
+            fi
+            sleep 2
+          done
+
+          curl --silent --fail http://127.0.0.1:8000/docs > /dev/null
+
+          pytest \
+            tests/test_employee_api.py \
+            tests/test_api_db_validation.py \
+            -v -s
+
+      - name: Start POST API and run POST tests
+        run: |
+          python -m uvicorn employee_post_api:app --host 127.0.0.1 --port 8000 > post_api.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:8000/docs > /dev/null; then
+              echo "POST API is ready"
+              break
+            fi
+            sleep 2
+          done
+
+          curl --silent --fail http://127.0.0.1:8000/docs > /dev/null
+
+          pytest \
+            tests/test_employee_post_api.py \
+            tests/test_post_negative_validation.py \
+            -v -s
