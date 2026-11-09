@@ -113,6 +113,23 @@ jobs:
             --html=reports/post_api_report.html \
             --self-contained-html
 
+      - name: Display API logs on failure
+        if: failure()
+        run: |
+          echo "===== GET API LOGS ====="
+          if [ -f get_api.log ]; then
+            cat get_api.log
+          else
+            echo "GET API log not available"
+          fi
+
+          echo "===== POST API LOGS ====="
+          if [ -f post_api.log ]; then
+            cat post_api.log
+          else
+            echo "POST API log not available"
+          fi
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
