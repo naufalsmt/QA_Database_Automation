@@ -47,6 +47,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Create reports directory
+        run: mkdir -p reports
+
       - name: Set up test database
         run: |
           PGPASSWORD=postgres psql -h localhost -U postgres -d qa_automation_db -f sql/setup_test_db.sql
@@ -60,7 +63,9 @@ jobs:
             tests/test_duplicate_check.py \
             tests/test_not_null_validation.py \
             tests/test_delete_validation.py \
-            -v -s
+            -v -s \
+            --html=reports/database_report.html \
+            --self-contained-html
 
       - name: Start GET API and run GET tests
         run: |
@@ -81,7 +86,9 @@ jobs:
           pytest \
             tests/test_employee_api.py \
             tests/test_api_db_validation.py \
-            -v -s
+            -v -s \
+            --html=reports/get_api_report.html \
+            --self-contained-html
 
       - name: Start POST API and run POST tests
         run: |
@@ -102,4 +109,15 @@ jobs:
           pytest \
             tests/test_employee_post_api.py \
             tests/test_post_negative_validation.py \
-            -v -s
+            -v -s \
+            --html=reports/post_api_report.html \
+            --self-contained-html
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-html-reports
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 7
